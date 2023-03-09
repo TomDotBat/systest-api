@@ -9,21 +9,16 @@ import (
 	"systest-proxy/payloads"
 )
 
-var app *fiber.App
-
 func main() {
 	logger := log.New("Core")
-	if !fiber.IsChild() {
-		logger.Info("Initialising Fiber application...")
-	}
+	logger.Info("Initialising Fiber application...")
 
 	if err := godotenv.Load(".env"); err != nil {
 		panic(err)
 	}
 
-	app = fiber.New(fiber.Config{
+	app := fiber.New(fiber.Config{
 		AppName:       "SysTest Proxy",
-		Prefork:       true,
 		CaseSensitive: true,
 		StrictRouting: true,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
