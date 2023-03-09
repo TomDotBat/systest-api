@@ -45,21 +45,21 @@ func (logger *Logger) Log(level Level, message string, arguments ...interface{})
 }
 
 func (logger *Logger) Fatal(message string, arguments ...interface{}) {
-	logger.Log(Fatal, message, arguments)
+	logger.Log(Fatal, message, arguments...)
 }
 
 func (logger *Logger) Error(message string, arguments ...interface{}) {
-	logger.Log(Error, message, arguments)
+	logger.Log(Error, message, arguments...)
 }
 
 func (logger *Logger) Warn(message string, arguments ...interface{}) {
-	logger.Log(Warn, message, arguments)
+	logger.Log(Warn, message, arguments...)
 }
 
 func (logger *Logger) Info(message string, arguments ...interface{}) {
-	logger.Log(Info, message, arguments)
+	logger.Log(Info, message, arguments...)
 }
 
 func (logger *Logger) Debug(message string, arguments ...interface{}) {
-	logger.Log(Debug, message, arguments)
+	logger.Log(Debug, message, arguments...)
 }
