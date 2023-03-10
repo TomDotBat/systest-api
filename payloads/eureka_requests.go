@@ -1,5 +1,9 @@
 package payloads
 
+type InstanceRegistrationRequest struct {
+	Instance *EurekaInstance `json:"instance" validate:"required"`
+}
+
 type EurekaApplication struct {
 	Name      string           `xml:"name" json:"name" validate:"required"`
 	Instances []EurekaInstance `xml:"instance" json:"instance" validate:"required"`
@@ -19,7 +23,7 @@ type EurekaInstance struct {
 	SecurePort                    *EurekaPort       `xml:"securePort,omitempty" json:"securePort,omitempty"`
 	DataCenterInfo                *EurekaDatacenter `xml:"dataCenterInfo" json:"dataCenterInfo"`
 	LeaseInfo                     *EurekaLease      `xml:"leaseInfo,omitempty" json:"leaseInfo,omitempty"`
-	Metadata                      *EurekaMetadata   `xml:"metadata,omitempty" json:"metadata,omitempty"`
+	Metadata                      map[string]string `xml:"metadata,omitempty" json:"metadata,omitempty"`
 	IsCoordinatingDiscoveryServer bool              `xml:"isCoordinatingDiscoveryServer,omitempty" json:"isCoordinatingDiscoveryServer,omitempty"`
 	LastUpdatedTimestamp          int               `xml:"lastUpdatedTimestamp,omitempty" json:"lastUpdatedTimestamp,omitempty"`
 	LastDirtyTimestamp            int               `xml:"lastDirtyTimestamp,omitempty" json:"lastDirtyTimestamp,omitempty"`
@@ -30,8 +34,7 @@ type EurekaInstance struct {
 }
 
 type EurekaPort struct {
-	Port    int  `xml:",chardata" json:"$"`
-	Enabled bool `xml:"enabled,attr" json:"@enabled"`
+	Port int `xml:",chardata" json:"$"`
 }
 
 type EurekaLease struct {
@@ -44,16 +47,12 @@ type EurekaLease struct {
 	ServiceUpTimestamp     int  `xml:"serviceUpTimestamp,omitempty" json:"serviceUpTimestamp,omitempty"`
 }
 
-type EurekaMetadata struct {
-	Map   map[string]string
-	Class string
-}
-
 type EurekaDatacenter struct {
 	Name     string                    `xml:"name" json:"name"`
 	Class    string                    `xml:"class,attr" json:"@class"`
 	Metadata *EurekaDatacenterMetadata `xml:"metadata,omitempty" json:"metadata,omitempty"`
 }
+
 type EurekaDatacenterMetadata struct {
 	AmiLaunchIndex   string `xml:"ami-launch-index,omitempty" json:"ami-launch-index,omitempty"`
 	LocalHostname    string `xml:"local-hostname,omitempty" json:"local-hostname,omitempty"`

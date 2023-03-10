@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"os"
@@ -9,38 +8,52 @@ import (
 	"systest/payloads"
 )
 
-var validate validator.Validate
+var logger *log.Logger
+var baseUrl string
 
-func validatePayload(ctx *fiber.Ctx, payload interface{}) error {
-	if err := ctx.BodyParser(payload); err != nil {
-		_ = ctx.Status(fiber.StatusBadRequest).JSON(payloads.NewEurekaError(
-			fiber.StatusBadRequest,
-			"SysTest could not parse the request body",
-			ctx,
-		))
-		return err
+func forwardRequest(agent *fiber.Agent, ctx *fiber.Ctx) error {
+	agent.Set("Content-Type", ctx.Get("Content-Type"))
+	agent.Set("Accept", ctx.Get("Accept"))
+
+	code, body, errors := agent.Bytes()
+	if errors != nil {
+		logger.Error("Failed to forward request:")
+		for _, err := range errors {
+			logger.Error(err.Error())
+		}
 	}
 
-	if err := validate.Struct(payload); err != nil {
-		_ = ctx.Status(fiber.StatusBadRequest).JSON(payloads.NewEurekaError(
-			fiber.StatusBadRequest,
-			"SysTest could not validate the request body",
-			ctx,
-		))
-		return err
+	return ctx.Status(code).Send(body)
+}
+
+func forwardPostRequest(ctx *fiber.Ctx, payload interface{}) error {
+	agent := fiber.Post(baseUrl + ctx.OriginalURL())
+
+	if payload == nil {
+		agent.Body(ctx.Body())
+	} else {
+		switch ctx.Get("Content-Type") {
+		case "application/json":
+			agent.JSON(payload)
+			break
+		case "application/xml":
+			agent.XML(payload)
+			break
+		default:
+			logger.Warn("Unsupported content type: %s", ctx.Get("Content-Type"))
+			agent.Body(ctx.Body())
+		}
 	}
 
-	return nil
+	return forwardRequest(agent, ctx)
 }
 
 func RegisterEurekaRoutes(app *fiber.App) {
-	logger := log.New("Eureka")
-	validate = *validator.New()
-
-	baseUrl := os.Getenv("EUREKA_BASE_URL")
-	api := app.Group("/eureka")
+	logger = log.New("Eureka Proxy")
+	baseUrl = os.Getenv("EUREKA_BASE_URL")
 
 	logger.Info("Registering Eureka proxy routes...")
+	api := app.Group("/eureka")
 
 	api.Get("/apps/", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for all application instances")
@@ -59,7 +72,19 @@ func RegisterEurekaRoutes(app *fiber.App) {
 
 	api.Post("/apps/:appId", func(ctx *fiber.Ctx) error {
 		logger.Info("Registering a new instance of %s", ctx.Params("appId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+
+		payload := &payloads.InstanceRegistrationRequest{}
+		if err := ctx.BodyParser(payload); err != nil {
+			logger.Warn("The request could not be parsed, however it shall be forwarded: %s", err.Error())
+		}
+
+		if port, err := CreateInstanceProxy(payload.Instance); err == nil {
+			logger.Info("Instance proxy created on port: %d", port)
+		} else {
+			logger.Warn("Failed to create instance proxy: %s", err.Error())
+		}
+
+		return forwardPostRequest(ctx, payload)
 	})
 
 	api.Get("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
@@ -68,12 +93,27 @@ func RegisterEurekaRoutes(app *fiber.App) {
 	})
 
 	api.Delete("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
-		logger.Info("De-registering %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
+		appId := ctx.Params("appId")
+		instanceId := ctx.Params("instanceId")
+
+		logger.Info("De-registering %s instance: %s", appId, instanceId)
+
+		var port int
+		if port = GetPortByInstanceId(instanceId); port == 0 {
+			port = GetPortByAppAndHostname(appId, instanceId)
+		}
+
+		if port == 0 {
+			logger.Warn("Cannot destroy proxy, none exists for: %s:%s", appId, instanceId)
+		} else {
+			DestroyInstanceProxy(port)
+		}
+
 		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
 	})
 
 	api.Put("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
-		logger.Info("Heartbeat received for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
+		logger.Debug("Heartbeat received for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
 		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
 	})
 

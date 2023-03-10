@@ -11,7 +11,6 @@ import (
 
 func main() {
 	logger := log.New("Core")
-	logger.Info("Initialising Fiber application...")
 
 	if err := godotenv.Load(".env"); err != nil {
 		panic(err)
@@ -29,11 +28,12 @@ func main() {
 		},
 	})
 
-	app.Use(recover.New()) //Panic protection
+	app.Use(recover.New())
 
 	RegisterEurekaRoutes(app)
 
 	address := os.Getenv("SERVER_IP_ADDRESS") + ":" + os.Getenv("SERVER_PORT")
+	logger.Info("Starting listen server on: %s", address)
 	if err := app.Listen(address); err != nil {
 		panic(err)
 	}
