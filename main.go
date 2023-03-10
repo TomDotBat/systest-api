@@ -33,7 +33,8 @@ func main() {
 
 	RegisterEurekaRoutes(app)
 
-	if err := app.Listen(":" + os.Getenv("SERVER_PORT")); err != nil {
+	address := os.Getenv("SERVER_IP_ADDRESS") + ":" + os.Getenv("SERVER_PORT")
+	if err := app.Listen(address); err != nil {
 		panic(err)
 	}
 }
