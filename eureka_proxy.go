@@ -11,6 +11,24 @@ import (
 var logger *log.Logger
 var baseUrl string
 
+func addCorsHeaders(ctx *fiber.Ctx) {
+	ctx.Vary(fiber.HeaderOrigin)
+	ctx.Vary(fiber.HeaderAccessControlRequestMethod)
+	ctx.Vary(fiber.HeaderAccessControlRequestHeaders)
+	ctx.Set(fiber.HeaderAccessControlAllowOrigin, "*")
+	ctx.Set(fiber.HeaderAccessControlAllowMethods, "GET,POST,HEAD,PUT,DELETE,PATCH")
+	ctx.Set(fiber.HeaderAccessControlAllowCredentials, "true")
+	ctx.Set(fiber.HeaderAccessControlAllowHeaders, "*")
+}
+
+func forwardContext(ctx *fiber.Ctx) error {
+	if err := proxy.Do(ctx, baseUrl+ctx.OriginalURL()); err != nil {
+		return err
+	}
+	addCorsHeaders(ctx)
+	return nil
+}
+
 func forwardRequest(agent *fiber.Agent, ctx *fiber.Ctx) error {
 	agent.Set("Content-Type", ctx.Get("Content-Type"))
 	agent.Set("Accept", ctx.Get("Accept"))
@@ -55,19 +73,19 @@ func RegisterEurekaRoutes(app *fiber.App) {
 	logger.Info("Registering Eureka proxy routes...")
 	api := app.Group("/eureka")
 
-	api.Get("/apps/", func(ctx *fiber.Ctx) error {
+	api.Get("/apps", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for all application instances")
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Get("/apps/delta", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for application instances with deltas")
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Get("/apps/:appId", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for all application instances of: %s", ctx.Params("appId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Post("/apps/:appId", func(ctx *fiber.Ctx) error {
@@ -89,7 +107,7 @@ func RegisterEurekaRoutes(app *fiber.App) {
 
 	api.Get("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Delete("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
@@ -109,41 +127,41 @@ func RegisterEurekaRoutes(app *fiber.App) {
 			DestroyInstanceProxy(port)
 		}
 
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Put("/apps/:appId/:instanceId", func(ctx *fiber.Ctx) error {
 		logger.Debug("Heartbeat received for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Put("/apps/:appId/:instanceId/status", func(ctx *fiber.Ctx) error {
 		logger.Info("Updating status override for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Delete("/apps/:appId/:instanceId/status", func(ctx *fiber.Ctx) error {
 		logger.Info("Removing status override for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Put("/apps/:appId/:instanceId/metadata", func(ctx *fiber.Ctx) error {
 		logger.Info("Updating metadata for %s instance: %s", ctx.Params("appId"), ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Get("/instances/:instanceId", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for instance: %s", ctx.Params("instanceId"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Get("/vips/:vipAddress", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying instances under vip address: %s", ctx.Params("vipAddress"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 
 	api.Get("/svips/:secureVipAddress", func(ctx *fiber.Ctx) error {
 		logger.Info("Querying for instances under secure vip address: %s", ctx.Params("secureVipAddress"))
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		return forwardContext(ctx)
 	})
 }
