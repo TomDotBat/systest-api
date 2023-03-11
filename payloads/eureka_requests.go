@@ -28,7 +28,7 @@ type EurekaInstance struct {
 	LastUpdatedTimestamp          int               `xml:"lastUpdatedTimestamp,omitempty" json:"lastUpdatedTimestamp,omitempty"`
 	LastDirtyTimestamp            int               `xml:"lastDirtyTimestamp,omitempty" json:"lastDirtyTimestamp,omitempty"`
 	ActionType                    string            `xml:"actionType,omitempty" json:"actionType,omitempty"`
-	OverriddenStatus              string            `xml:"overriddenstatus,omitempty" json:"overriddenstatus,omitempty"`
+	OverriddenStatus              string            `xml:"overriddenStatus,omitempty" json:"overriddenStatus,omitempty"`
 	CountryId                     int               `xml:"countryId,omitempty" json:"countryId,omitempty"`
 	InstanceId                    string            `xml:"instanceId,omitempty" json:"instanceId,omitempty"`
 }
