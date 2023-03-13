@@ -99,7 +99,15 @@ func CreateInstanceProxy(instance *payloads.EurekaInstance) (int, error) {
 	app.Use(recover.New())
 
 	app.All("/*", func(ctx *fiber.Ctx) error {
-		return proxy.Do(ctx, baseUrl+ctx.OriginalURL())
+		CollectRequest(instance, ctx)
+
+		if err := proxy.Do(ctx, baseUrl+ctx.OriginalURL()); err != nil {
+			logger.Error("Failed to proxy request: %s", err.Error())
+			return err
+		}
+
+		CollectResponse(ctx)
+		return nil
 	})
 
 	logger.Info("Starting listen server on: %s:%d", ipAddress, port)
